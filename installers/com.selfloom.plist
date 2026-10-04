@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  macOS LaunchAgent for selfloom.
+
+  NOTE: You usually DON'T need this. Claude Desktop and Claude Code spawn
+  selfloom themselves whenever they start — stdio MCP servers don't need to
+  be running in the background.
+
+  Install this plist only if you want selfloom running as a long-lived
+  background service for some other reason (e.g. an HTTP mode added later).
+
+  To install:
+    1. Edit the two /ABSOLUTE/PATH placeholders below.
+    2. Copy to ~/Library/LaunchAgents/com.selfloom.plist
+    3. launchctl load ~/Library/LaunchAgents/com.selfloom.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTD/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.selfloom</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/ABSOLUTE/PATH/TO/loom</string>
+        <string>--vault</string>
+        <string>/ABSOLUTE/PATH/TO/VAULT</string>
+        <string>serve</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/selfloom.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/selfloom.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>SELFLOOM_VAULT</key>
+        <string>/ABSOLUTE/PATH/TO/VAULT</string>
+    </dict>
+</dict>
+</plist>

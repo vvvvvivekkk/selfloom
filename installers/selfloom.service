@@ -1,0 +1,28 @@
+# systemd user service for selfloom.
+#
+# NOTE: You usually DON'T need this. Claude Desktop and Claude Code spawn
+# selfloom themselves whenever they start — stdio MCP servers don't need to
+# be running in the background. Install only if you want a long-lived daemon
+# for some other reason (e.g. an HTTP mode added later).
+#
+# Install:
+#   1. Edit the two /ABSOLUTE/PATH placeholders below.
+#   2. mkdir -p ~/.config/systemd/user
+#   3. cp installers/selfloom.service ~/.config/systemd/user/
+#   4. systemctl --user daemon-reload
+#   5. systemctl --user enable --now selfloom.service
+#   6. loginctl enable-linger "$USER"    # so it survives logout
+
+[Unit]
+Description=selfloom — local MCP memory layer
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/ABSOLUTE/PATH/TO/loom --vault /ABSOLUTE/PATH/TO/VAULT serve
+Restart=on-failure
+RestartSec=5s
+Environment=SELFLOOM_VAULT=/ABSOLUTE/PATH/TO/VAULT
+
+[Install]
+WantedBy=default.target

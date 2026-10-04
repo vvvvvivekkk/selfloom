@@ -1,0 +1,16 @@
+{
+  "_comment_1": "Merge the `selfloom` entry below into your `mcpServers` object in Claude Desktop's config file.",
+  "_comment_2": "Config file lives at:",
+  "_comment_3": "  macOS   ~/Library/Application Support/Claude/claude_desktop_config.json",
+  "_comment_4": "  Windows %APPDATA%\\Claude\\claude_desktop_config.json",
+  "_comment_5": "  Linux   ~/.config/Claude/claude_desktop_config.json",
+  "_comment_6": "Replace /ABSOLUTE/PATH/TO/VAULT with wherever you ran `loom init`.",
+  "_comment_7": "Replace /ABSOLUTE/PATH/TO/loom with the full path to the loom binary (`which loom`).",
+
+  "mcpServers": {
+    "selfloom": {
+      "command": "/ABSOLUTE/PATH/TO/loom",
+      "args": ["--vault", "/ABSOLUTE/PATH/TO/VAULT", "serve"]
+    }
+  }
+}

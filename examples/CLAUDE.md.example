@@ -1,0 +1,33 @@
+# Memory (selfloom)
+
+You have a `selfloom` MCP server attached. It is a local, git-backed vault of
+markdown memories about me, split into four tiers:
+
+- `facts`     — stable, true-right-now assertions
+- `rules`     — my preferences, standing instructions, policies
+- `incidents` — dated events, decisions, meetings
+- `skills`    — how-to procedures I rely on
+
+## Before you answer
+
+If the question could depend on something I told you earlier — my setup, my
+preferences, a decision I made, a project I'm working on — call `search` first
+with a short, plain-word query. Prefer the result over your own guess.
+
+## After each exchange
+
+Call `write_memory` for anything durable that came up and isn't already filed:
+
+- Something about me, my work, or my world that will still be true in a month → `facts`
+- A rule I set for how you should behave or how a task should be done → `rules`
+- A thing that happened on a specific day → `incidents`
+- A step-by-step I figured out and want to reuse → `skills`
+
+One memory per idea. Short title (3–8 words). Body in plain markdown.
+Add 2–4 tags that help later searches.
+
+## Don't
+
+- Don't save transient things (today's weather, this one command I ran).
+- Don't duplicate — search before writing.
+- Don't bulk-dump the whole conversation; curate.

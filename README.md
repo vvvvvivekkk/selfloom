@@ -1,96 +1,157 @@
 # selfloom
 
-> Local-first memory for AI agents. Git-backed markdown. MCP out of the box. Zero cloud.
+> Local-first memory for Claude Desktop, Claude Code, and any other MCP client.
+> Markdown + git. Single tiny binary. Zero cloud.
 
-**selfloom** is a single-binary memory layer for coding agents and chat assistants. Point Claude Code, Cursor, or any MCP client at it, and your conversations turn into a vault of markdown notes you can grep, edit by hand, and `git log` through — forever, on your own machine.
+**selfloom** is one small Rust binary that gives your AI tools a shared, persistent memory of you — stored as plain markdown files, versioned by git, searched by SQLite FTS5, and exposed over the Model Context Protocol. Point Claude Desktop and Claude Code at the same vault and whatever one learns, the other knows.
 
-Think *GitLoom*, but local. Think *Obsidian*, but written for AI agents instead of humans.
+Think *GitLoom*, but local and open source. Think *Obsidian*, but written for AI agents instead of humans.
 
----
+- **Local-first.** Vault is a folder on your disk. Nothing leaves your machine.
+- **Human-readable.** Every memory is a markdown file you can open and edit.
+- **Versioned.** Every write is a git commit — full history, forever.
+- **Shared.** Same vault for Claude Desktop, Claude Code, Cursor, Zed, your own scripts.
+- **Tiny.** ~1.8 MB release binary. No runtime, no daemon, no deps.
 
-## Why
+## Install
 
-Agents forget. The usual answers are:
-
-- **Cloud memory APIs** — fast to adopt, but your conversations and private thoughts end up on someone else's server.
-- **Vector DBs** — opaque. You can't open a row and read it. You can't `git blame` a fact.
-- **Big desktop apps** — Obsidian is 400+ MB of Electron. Logseq is heavier. Neither speaks MCP natively.
-
-selfloom picks the stubborn third option: **plain markdown files, versioned by git, searched by SQLite FTS + local vectors, exposed through MCP.** The whole thing is one static binary. Your data lives in a folder you own.
-
-## What's in the box
-
-- **Markdown vault** — one file per memory, grouped into `facts/`, `rules/`, `incidents/`, `skills/` tiers (idea borrowed from GitLoom).
-- **Git under the hood** — every write is a commit with provenance (who, when, from which conversation).
-- **Hybrid retrieval** — BM25 (full-text), vector (local embeddings), and wiki-link graph, fused into one score.
-- **MCP server** — stdio transport, drop into any MCP-aware client.
-- **Bring your own LLM** — extraction can call Ollama locally, or Claude / OpenAI with your own key. Never ours.
-- **Tiny** — target: < 50 MB RAM idle, < 100 ms search on 10k memories, single ~15 MB binary.
-
-## Quickstart (planned)
+Requires Rust (`rustup`) and git. SQLite is bundled.
 
 ```bash
-# install
-brew install selfloom           # or: cargo install selfloom
-
-# make a vault
-loom init ./brain
-
-# start the MCP server
-loom serve --vault ./brain
-
-# or hook into Claude Code
-# add to ~/.config/claude-code/mcp.json:
-# {
-#   "selfloom": { "command": "loom", "args": ["serve", "--vault", "/path/to/brain"] }
-# }
+git clone https://github.com/vvvvvivekkk/selfloom
+cd selfloom
+cargo build --release
+# binary lands at ./target/release/loom
+# move it onto your PATH, e.g.:
+sudo cp target/release/loom /usr/local/bin/
 ```
 
-Then just use your AI like normal. `ingest_conversation` fires automatically on each exchange; `search` fires when the agent needs context.
+Homebrew tap and `cargo install selfloom` land in v1.0.
 
-## MCP tools
+## Make a vault
 
-| tool                   | what it does                                            |
-| ---------------------- | ------------------------------------------------------- |
-| `ingest_conversation`  | takes messages, extracts memories into the right tier  |
-| `search`               | hybrid BM25 + vector + graph query                      |
-| `read_memory`          | fetches one memory by path                              |
-| `write_memory`         | writes a memory directly (bypasses extraction)          |
-| `list_namespaces`      | lists vaults                                            |
-| `create_namespace`     | creates a new vault                                     |
-| `backlinks`            | returns memories that `[[wiki-link]]` to this one       |
-
-## How it works
-
-```
-Ingest:   conversation → LLM extract → markdown write → git commit → index update
-Retrieve: query → BM25 ∥ vector ∥ graph → score fusion → top-K with provenance
+```bash
+loom --vault ~/brain init
+export SELFLOOM_VAULT=~/brain      # so you can drop --vault from now on
 ```
 
-Full diagrams and design notes are in [`docs/architecture.md`](docs/architecture.md).
+That gives you:
+
+```
+~/brain/
+├── .git/                      # every write becomes a commit
+├── .selfloom/
+│   ├── config.toml
+│   └── index.sqlite           # FTS5 index
+└── namespaces/
+    └── default/
+        ├── facts/
+        ├── rules/
+        ├── incidents/
+        └── skills/
+```
+
+## Try it from the CLI
+
+```bash
+loom write --title "Prefers filter coffee" --tier rules \
+  --tags "food,preference" \
+  "Daily morning filter coffee, never instant."
+
+loom search coffee
+# → 0.500  namespaces/default/rules/2026-10-04-prefers-filter-coffee-xxx.md
+#       Daily morning filter «coffee», never instant.
+```
+
+Open the file in any editor — it's just markdown with YAML frontmatter.
+
+## Wire it into Claude Desktop
+
+Edit (or create) your Claude Desktop config file:
+
+- **macOS** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows** `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux** `~/.config/Claude/claude_desktop_config.json`
+
+Add the `selfloom` entry under `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "selfloom": {
+      "command": "/usr/local/bin/loom",
+      "args": ["--vault", "/Users/you/brain", "serve"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop. You'll see selfloom's tools in the tools picker. Full snippet in [`examples/claude-desktop.json`](examples/claude-desktop.json).
+
+## Wire it into Claude Code
+
+One command, user scope (every project gets it):
+
+```bash
+claude mcp add --scope user selfloom \
+  /usr/local/bin/loom --vault /Users/you/brain serve
+
+claude mcp list     # confirm
+```
+
+Open any project and type `/mcp` to see the tools. More options (per-project `.mcp.json`, direct user-config edit) in [`examples/claude-code.md`](examples/claude-code.md).
+
+## Nudge the model to actually use it
+
+MCP tools are opt-in — the model decides when to call them. Drop [`examples/CLAUDE.md.example`](examples/CLAUDE.md.example) into your project (or `~/.claude/CLAUDE.md` for global) so Claude knows to search before answering and write after conversations.
+
+## MCP tools exposed
+
+| tool              | what it does                                                 |
+| ----------------- | ------------------------------------------------------------ |
+| `search`          | BM25 full-text search over the vault, filter by tier / ns    |
+| `read_memory`     | fetch one memory by path                                     |
+| `write_memory`    | save a memory with title, body, tier, tags                   |
+| `list_namespaces` | list vaults inside the vault                                 |
+
+## About "autostart"
+
+Claude Desktop and Claude Code spawn `loom serve` themselves over stdio when they launch. **You don't need to run it as a service.** Both apps share the vault because they both write to the same folder.
+
+The `installers/` folder has launchd and systemd files for the day you want selfloom running as a daemon for other reasons (HTTP mode, Cursor over SSE, etc.). You can skip them for now.
+
+## Architecture
+
+```
+Ingest:   conversation → write_memory → markdown → git commit → FTS5 index
+Retrieve: query → BM25 (FTS5) → ranked results with snippets
+```
+
+v0.1 is BM25-only. v0.2 adds LLM-powered conversation extraction (so you don't have to call `write_memory` by hand). v0.3 adds local embeddings + hybrid retrieval. See [`docs/architecture.md`](docs/architecture.md) for the full plan.
 
 ## Status
 
-This repo is **in design**. Not usable yet. Watch the repo (or star it) if you want to be nudged when there's something to run.
+**v0.1 is here.** Everything above actually runs. Expect bugs — open an issue.
 
-## Roadmap
-
-- [ ] **v0.1** — markdown vault + git + SQLite FTS5 + MCP `search`/`read`/`write`
-- [ ] **v0.2** — `ingest_conversation` with LLM extraction into tiers
-- [ ] **v0.3** — local embeddings (fastembed) + HNSW vector search + score fusion
-- [ ] **v0.4** — wiki-link graph + backlinks tool
-- [ ] **v0.5** — namespaces, auth for HTTP mode, Docker image
-- [ ] **v1.0** — Homebrew tap, cargo install, demo video, launch
+- [x] markdown vault + per-write git commits
+- [x] SQLite FTS5 index with snippets
+- [x] stdio MCP server (initialize, tools/list, tools/call)
+- [x] CLI: init, serve, write, read, search, reindex
+- [ ] v0.2 — `ingest_conversation` tool with LLM extraction into tiers
+- [ ] v0.3 — local embeddings + HNSW vector search + score fusion
+- [ ] v0.4 — wiki-link graph + backlinks
+- [ ] v0.5 — namespaces polish, HTTP mode, Docker image
+- [ ] v1.0 — Homebrew tap, cargo install, demo video, launch
 
 ## Prior art
 
-- [GitLoom](https://gitloom.cloud) — the cloud product that inspired this one. Credit where due; selfloom borrows the tier model and the git-backed markdown idea. The wedge here is local-first and open source.
-- [Basic Memory](https://github.com/basicmachines-co/basic-memory) — Python-based MCP memory server. Similar spirit, different stack.
+- [GitLoom](https://gitloom.cloud) — the cloud product that inspired this one. Credit for the tier model (`facts/rules/incidents/skills`) and git-backed-markdown idea. selfloom's wedge is local-first and open source.
+- [Basic Memory](https://github.com/basicmachines-co/basic-memory) — Python MCP memory server. Different stack, similar spirit.
 - [mem0](https://mem0.ai), [Letta](https://letta.com), [Zep](https://getzep.com) — hosted memory layers for agents.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
 ---
 
