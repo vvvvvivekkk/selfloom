@@ -1,0 +1,31 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Node / JS tooling (for any helper scripts)
+node_modules/
+.pnp
+.pnp.js
+dist/
+build/
+
+# Local vault test fixtures
+/scratch/
+/brain/
+*.vault/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
